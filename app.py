@@ -1,9 +1,9 @@
 import tkinter as tk
-from tkinter import messagebox
-from tkinter import ttk
+from tkinter import messagebox, ttk
 import requests
 from PIL import Image, ImageTk
 import hashlib
+import socket
 
 def hash_dogrula(dosya_yolu, beklenen_hash):
     with open(dosya_yolu, 'rb') as f:
@@ -66,6 +66,17 @@ def ip_sorgula():
             lat_dms, lon_dms = "N/A", "N/A"
             adres = "Adres bulunamadı."
 
+        # Kullanıcıdan alınan port aralığı için tarama yap
+        baslangic_port = int(girdi_baslangic_port.get())
+        bitis_port = int(girdi_bitis_port.get())
+
+        if baslangic_port > bitis_port:
+            messagebox.showerror("Hata", "Başlangıç port numarası bitiş port numarasından büyük olamaz.")
+            return
+
+        port_listesi = range(baslangic_port, bitis_port + 1)
+        ip_ports = tara_portlar(ip, port_listesi)
+
         bilgiler = (
             f"IP: {veriler.get('ip', 'N/A')}\n"
             f"Hostname: {veriler.get('hostname', 'N/A')}\n"
@@ -77,6 +88,7 @@ def ip_sorgula():
             f"Org: {veriler.get('org', 'N/A')}\n"
             f"Posta Kodu: {veriler.get('postal', 'N/A')}\n"
             f"Zaman Dilimi: {veriler.get('timezone', 'N/A')}\n"
+            f"Açık Portlar: {ip_ports}\n"
         )
         text_bilgiler.delete("1.0", tk.END)
         text_bilgiler.insert(tk.END, bilgiler)
@@ -84,6 +96,17 @@ def ip_sorgula():
         messagebox.showerror("Hata", f"API isteği başarısız oldu: {e}")
     except Exception as e:
         messagebox.showerror("Hata", f"Bir hata oluştu: {e}")
+
+def tara_portlar(ip, port_listesi):
+    open_ports = []
+    for port in port_listesi:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(0.1)
+        result = sock.connect_ex((ip, port))
+        if result == 0:
+            open_ports.append(port)
+        sock.close()
+    return open_ports
 
 pencere = tk.Tk()
 pencere.title("NMSIPScanner")
@@ -111,6 +134,18 @@ etiket_ip.pack(side=tk.LEFT)
 girdi_ip = ttk.Entry(cerceve)
 girdi_ip.pack(side=tk.LEFT, padx=5)
 
+etiket_baslangic_port = tk.Label(cerceve, text="Başlangıç Port:")
+etiket_baslangic_port.pack(side=tk.LEFT)
+
+girdi_baslangic_port = ttk.Entry(cerceve)
+girdi_baslangic_port.pack(side=tk.LEFT, padx=5)
+
+etiket_bitis_port = tk.Label(cerceve, text="Bitiş Port:")
+etiket_bitis_port.pack(side=tk.LEFT)
+
+girdi_bitis_port = ttk.Entry(cerceve)
+girdi_bitis_port.pack(side=tk.LEFT, padx=5)
+
 buton_sorgula = ttk.Button(cerceve, text="Sorgula", command=ip_sorgula)
 buton_sorgula.pack(side=tk.LEFT)
 
@@ -118,4 +153,3 @@ text_bilgiler = tk.Text(pencere, height=20, width=60)
 text_bilgiler.pack(pady=10)
 
 pencere.mainloop()
-
